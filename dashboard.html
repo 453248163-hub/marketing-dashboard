@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G-营销服数智化效能分析看板</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0b1120;
+            color: #e2e8f0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            min-height: 100vh;
+            padding: 24px 32px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .header {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(148,163,184,0.1);
+        }
+        .header h1 {
+            font-size: 26px;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin-bottom: 6px;
+        }
+        .header p {
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        /* KPI Cards */
+        .kpi-section {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .kpi-card {
+            background: #111827;
+            border-radius: 8px;
+            padding: 16px 20px;
+            border-top: 3px solid;
+        }
+        .kpi-card.blue { border-color: #3b82f6; }
+        .kpi-card.green { border-color: #10b981; }
+        .kpi-card.red { border-color: #ef4444; }
+        .kpi-card.orange { border-color: #f59e0b; }
+        .kpi-card.purple { border-color: #8b5cf6; }
+        .kpi-card.cyan { border-color: #06b6d4; }
+
+        .kpi-header {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 14px; font-size: 14px; font-weight: 600; color: #f1f5f9;
+        }
+        .kpi-icon {
+            width: 18px; height: 18px; border-radius: 4px;
+            display: inline-flex; align-items: center; justify-content: center; font-size: 11px;
+        }
+        .kpi-icon.blue { background: rgba(59,130,246,0.25); }
+        .kpi-icon.green { background: rgba(16,185,129,0.25); }
+        .kpi-icon.red { background: rgba(239,68,68,0.25); }
+        .kpi-icon.orange { background: rgba(245,158,11,0.25); }
+        .kpi-icon.purple { background: rgba(139,92,246,0.25); }
+        .kpi-icon.cyan { background: rgba(6,182,212,0.25); }
+
+        .kpi-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
+        .kpi-month { font-size: 12px; color: #64748b; min-width: 28px; }
+        .kpi-value { font-size: 26px; font-weight: 700; color: #f1f5f9; }
+        .kpi-badge { font-size: 11px; padding: 1px 6px; border-radius: 3px; font-weight: 500; }
+        .kpi-badge.up { background: rgba(239,68,68,0.15); color: #f87171; }
+        .kpi-badge.down { background: rgba(16,185,129,0.15); color: #34d399; }
+
+        .kpi-footer {
+            margin-top: 10px; padding: 6px 12px; border-radius: 4px;
+            font-size: 12px; font-weight: 600; text-align: center;
+        }
+        .kpi-footer.warning { background: rgba(245,158,11,0.1); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+        .kpi-footer.danger { background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+        .kpi-footer.success { background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+
+        /* Section Styles */
+        .section { margin-bottom: 28px; }
+        .section-title {
+            font-size: 16px; font-weight: 700; color: #f1f5f9;
+            margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+        }
+
+        /* Chart Grid */
+        .chart-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px;
+        }
+        .chart-box {
+            background: #111827; border-radius: 8px; padding: 16px 20px;
+        }
+        .chart-box-title { font-size: 14px; font-weight: 600; color: #f1f5f9; margin-bottom: 2px; }
+        .chart-box-subtitle { font-size: 11px; color: #64748b; margin-bottom: 12px; }
+        .chart-container { width: 100%; height: 240px; }
+        .chart-container.tall { height: 280px; }
+
+        /* Analysis Text */
+        .analysis-box {
+            background: #111827; border-radius: 8px; padding: 18px 22px; margin-bottom: 20px;
+        }
+        .analysis-item {
+            padding: 8px 0; border-bottom: 1px solid rgba(148,163,184,0.08);
+            font-size: 13px; line-height: 1.7; color: #cbd5e1;
+        }
+        .analysis-item:last-child { border-bottom: none; }
+        .analysis-item::before { content: '▸ '; color: #64748b; }
+        .analysis-item strong { color: #f1f5f9; font-weight: 600; }
+
+        .tag {
+            display: inline-block; padding: 1px 8px; border-radius: 3px;
+            font-size: 11px; font-weight: 600; margin: 0 2px;
+        }
+        .tag.red { background: rgba(239,68,68,0.2); color: #f87171; }
+        .tag.green { background: rgba(16,185,129,0.2); color: #34d399; }
+        .tag.orange { background: rgba(245,158,11,0.2); color: #fbbf24; }
+        .tag.blue { background: rgba(59,130,246,0.2); color: #60a5fa; }
+        .tag.purple { background: rgba(139,92,246,0.2); color: #a78bfa; }
+
+        .key-insight {
+            background: rgba(59,130,246,0.06); border-left: 3px solid #3b82f6;
+            border-radius: 6px; padding: 14px 18px; margin-top: 14px;
+            font-size: 13px; line-height: 1.7; color: #cbd5e1;
+        }
+        .key-insight .label { color: #60a5fa; font-weight: 600; }
+        .check-green { color: #34d399; }
+
+        /* Summary Section */
+        .summary-section {
+            background: linear-gradient(135deg, #1a1040 0%, #0f172a 100%);
+            border-radius: 10px; padding: 24px 28px; margin-top: 24px;
+        }
+        .summary-title {
+            text-align: center; font-size: 18px; font-weight: 700; color: #f1f5f9;
+            margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .score-bar {
+            display: flex; align-items: center; gap: 16px; justify-content: center; margin-bottom: 24px;
+        }
+        .score-label { font-size: 15px; font-weight: 600; color: #f1f5f9; }
+        .score-track { width: 280px; height: 14px; background: #1e293b; border-radius: 7px; overflow: hidden; }
+        .score-fill { height: 100%; background: linear-gradient(90deg, #f59e0b, #fbbf24); border-radius: 7px; width: 52%; }
+        .score-value { font-size: 18px; font-weight: 700; color: #fbbf24; }
+
+        .rec-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px; }
+        .rec-card { padding: 16px 18px; border-radius: 8px; border-left: 3px solid; }
+        .rec-card.urgent { background: rgba(239,68,68,0.06); border-color: #ef4444; }
+        .rec-card.attention { background: rgba(245,158,11,0.06); border-color: #f59e0b; }
+        .rec-card.strength { background: rgba(16,185,129,0.06); border-color: #10b981; }
+        .rec-card.improvement { background: rgba(59,130,246,0.06); border-color: #3b82f6; }
+
+        .rec-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .rec-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .rec-dot.red { background: #ef4444; }
+        .rec-dot.orange { background: #f59e0b; }
+        .rec-dot.green { background: #10b981; }
+        .rec-dot.blue { background: #3b82f6; }
+
+        .rec-list { list-style: none; font-size: 13px; line-height: 1.8; color: #cbd5e1; }
+        .rec-list li::before { content: attr(data-num); margin-right: 4px; color: #94a3b8; }
+
+        .conclusion-box {
+            background: rgba(15,23,42,0.6); border-radius: 8px; padding: 16px 20px; border-left: 3px solid #f59e0b;
+        }
+        .conclusion-text { font-size: 13px; line-height: 1.8; color: #cbd5e1; }
+        .hl { color: #60a5fa; font-weight: 600; }
+        .hl-orange { color: #fbbf24; font-weight: 600; }
+
+        @media (max-width: 1200px) {
+            .kpi-section { grid-template-columns: repeat(2, 1fr); }
+            .chart-grid { grid-template-columns: 1fr; }
+            .rec-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            body { padding: 16px; }
+            .kpi-section { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>G-营销服数智化效能分析看板</h1>
+    <p>分析周期：2026年3月 — 5月 | 数据范围：第10周 — 第22周</p>
+</div>
+
+<!-- KPI Cards Row 1 -->
+<div class="kpi-section">
+    <div class="kpi-card green">
+        <div class="kpi-header"><span class="kpi-icon blue">📊</span> 新增需求数</div>
+        <div class="kpi-row"><span class="kpi-month">3月</span><span class="kpi-value">109</span></div>
+        <div class="kpi-row"><span class="kpi-month">4月</span><span class="kpi-value">72</span><span class="kpi-badge down">↓ -33.9%</span></div>
+        <div class="kpi-row"><span class="kpi-month">5月</span><span class="kpi-value">75</span><span class="kpi-badge up">↑ +4.2%</span></div>
+        <div class="kpi-footer success">小幅回升</div>
+    </div>
+    <div class="kpi-card red">
+        <div class="kpi-header"><span class="kpi-icon green">✅</span> 完成需求数</div>
+        <div class="kpi-row"><span class="kpi-month">3月</span><span class="kpi-value">82</span></div>
+        <div class="kpi-row"><span class="kpi-month">4月</span><span class="kpi-value">51</span><span class="kpi-badge down">↓ -37.8%</span></div>
+        <div class="kpi-row"><span class="kpi-month">5月</span><span class="kpi-value">24</span><span class="kpi-badge down">↓ -52.9%</span></div>
+        <div class="kpi-footer danger">断崖式下滑</div>
+    </div>
+    <div class="kpi-card orange">
+        <div class="kpi-header"><span class="kpi-icon red"></span> 在研需求数</div>
+        <div class="kpi-row"><span class="kpi-month">3月</span><span class="kpi-value">26</span></div>
+        <div class="kpi-row"><span class="kpi-month">4月</span><span class="kpi-value">20</span><span class="kpi-badge down">↓ -23.1%</span></div>
+        <div class="kpi-row"><span class="kpi-month">5月</span><span class="kpi-value">48</span><span class="kpi-badge up">↑ +140%</span></div>
+        <div class="kpi-footer warning">WIP 失控</div>
+    </div>
+    <div class="kpi-card orange">
+        <div class="kpi-header"><span class="kpi-icon orange">⚠️</span> 阻塞需求数</div>
+        <div class="kpi-row"><span class="kpi-month">3月</span><span class="kpi-value">6</span></div>
+        <div class="kpi-row"><span class="kpi-month">4月</span><span class="kpi-value">5</span><span class="kpi-badge down">↓ -16.7%</span></div>
+        <div class="kpi-row"><span class="kpi-month">5月</span><span class="kpi-value">12</span><span class="kpi-badge up">↑ +140%</span></div>
+        <div class="kpi-footer warning">翻倍增长</div>
+    </div>
+</div>
+
+<!-- KPI Cards Row 2 -->
+<div class="kpi-section">
+    <div class="kpi-card red">
+        <div class="kpi-header"><span class="kpi-icon purple"></span> 交付率</div>
+        <div class="kpi-row"><span class="kpi-month">3月</span><span class="kpi-value">76%</span></div>
+        <div class="kpi-row"><span class="kpi-month">4月</span><span class="kpi-value">72%</span><span class="kpi-badge down">↓ -5.3%</span></div>
+        <div class="kpi-row"><span class="kpi-month">5月</span><span class="kpi-value">33%</span><span class="kpi-badge down">↓ -54.2%</span></div>
+        <div class="kpi-footer danger">断崖式下跌<br><small>产出/流入比仅32%</small></div>
+    </div>
+    <div class="kpi-card orange" style="min-height: 180px; display: flex; flex-direction: column;">
+        <div class="kpi-header"><span class="kpi-icon purple">⭐</span> 高价值交付率</div>
+        <div class="kpi-row"><span class="kpi-month" style="min-width:auto">P0</span><span class="kpi-value" style="color:#f87171;font-size:20px">5%</span><span style="font-size:11px;color:#64748b;margin-left:4px">高价值占比</span><span style="font-size:11px;color:#64748b;margin-left:4px">交付率100%</span></div>
+        <div class="kpi-row"><span class="kpi-month" style="min-width:auto">P1+P2</span><span class="kpi-value" style="color:#fbbf24;font-size:20px">59%</span></div>
+        <div class="kpi-row"><span class="kpi-month" style="min-width:auto">低价值占比</span><span class="kpi-value" style="font-size:20px">1%</span><span class="check-green"> ✓</span></div>
+        <div class="kpi-footer warning" style="margin-top: auto;">P0高价值占比低<br><small>P1需求交付率偏低</small></div>
+    </div>
+    <div class="kpi-card orange">
+        <div class="kpi-header"><span class="kpi-icon cyan">⏱</span> 交付周期(天)</div>
+        <div class="kpi-row"><span class="kpi-month">3月</span><span class="kpi-value">31</span></div>
+        <div class="kpi-row"><span class="kpi-month">4月</span><span class="kpi-value">24</span><span class="kpi-badge down">↓ -22.6%</span></div>
+        <div class="kpi-row"><span class="kpi-month">5月</span><span class="kpi-value">34</span><span class="kpi-badge up">↑ +41.7%</span></div>
+        <div class="kpi-footer warning">周期反弹<br><small>比3月还长3天</small></div>
+    </div>
+    <div class="kpi-card green">
+        <div class="kpi-header"><span class="kpi-icon green">🔧</span> 缺陷修复率</div>
+        <div class="kpi-row"><span class="kpi-month" style="min-width:auto">新增</span><span class="kpi-value">1312</span></div>
+        <div class="kpi-row"><span class="kpi-month" style="min-width:auto">修复</span><span class="kpi-value">1297</span></div>
+        <div class="kpi-row"><span class="kpi-month" style="min-width:auto">修复率</span><span class="kpi-value" style="color:#34d399;font-size:22px">99%</span><span class="check-green"> ✓</span></div>
+        <div class="kpi-footer success">修复能力优秀<br><small>均修复周期1天</small></div>
+    </div>
+</div>
+
+<!-- ==================== 交付效能分析 ==================== -->
+<div class="section">
+    <div class="section-title">🚀 交付效能分析</div>
+    <div class="chart-grid">
+        <div class="chart-box">
+            <div class="chart-box-title">需求趋势</div>
+            <div class="chart-box-subtitle">新增需求251个 完成总数157个 交付率63%</div>
+            <div id="chart-demand-trend" class="chart-container tall"></div>
+        </div>
+        <div class="chart-box">
+            <div class="chart-box-title">需求交付速率分布</div>
+            <div class="chart-box-subtitle">周均交付需求：13个 &nbsp; 均交付周期：20天</div>
+            <div id="chart-delivery-rate" class="chart-container tall"></div>
+        </div>
+    </div>
+    <div class="chart-grid">
+        <div class="chart-box">
+            <div class="chart-box-title">需求累计流图</div>
+            <div class="chart-box-subtitle">各阶段堆积情况</div>
+            <div id="chart-cumulative-flow" class="chart-container tall"></div>
+        </div>
+        <div class="chart-box">
+            <div class="chart-box-title">需求价值交付分布</div>
+            <div class="chart-box-subtitle">高价值需求交付率：86% &nbsp; 低价值需求交付占比：1%</div>
+            <div id="chart-value-dist" class="chart-container tall"></div>
+        </div>
+    </div>
+    <div class="analysis-box">
+        <div class="analysis-item"><strong>交付能力断崖式下滑：</strong>完成需求数从3月的 <strong>82个</strong> 骤降至5月的 <strong>24个</strong>，环比下降 <strong>52.94%</strong>。虽然5月在研需求增至48个（环比+140%），但完成数却大幅降低。<span class="tag red">可能原因：渠道-汽车领域排队耗时109天形成瓶颈 + 资源被抽调至其他项目（消费者移动端投入从1972h骤降至454h）</span></div>
+        <div class="analysis-item"><strong>需求流入与产出失衡：</strong>3-4月新增需求从109降至72（-33.94%），但完成数从82降至51（-37.80%），产出降幅更大。5月新增回升至75（+4.17%），但完成数继续暴跌至24，<span class="tag red">产出/流入比仅 0.32</span>，处于极度不健康状态。<span class="tag red">可能原因：WIP限制缺失 + 需求拆分粒度粗，大量需求长期处于"在研"状态</span></div>
+        <div class="analysis-item"><strong>在研与阻塞需求激增：</strong>5月在研需求48个（环比+140%），阻塞需求12个（环比+140%）。这意味着大量需求堆积在 pipeline 中无法推进。<span class="tag orange">可能原因：跨部门协作不畅 + 评审/验收流程冗长，需求在队列中等待时间远超实际开发时间</span></div>
+        <div class="analysis-item"><strong>交付周期波动异常：</strong>3月31天 → 4月改善至24天（-22.58%）→ 5月恶化至34天（+41.67%）。5月交付周期比3月还长3天。<span class="tag red">可能原因：返工率高（每需求≈8个缺陷）+ 排队等待时间长</span></div>
+        <div class="analysis-item"><strong>价值交付结构健康：</strong>高价值需求（P0/P1/P2）交付率达 <strong>86%</strong>，低价值需求交付占比仅 <strong>1%</strong>。说明团队在有限产能下能够聚焦高价值需求，优先级管理得当。<span class="check-green">✓</span></div>
+        <div class="key-insight">
+            <span class="label">💡 关键洞察：</span>5月<strong>交付率33%</strong>断崖式下跌——产出/流入比仅<strong>0.32</strong>（完成24个/新增75个），大量需求（48个在研+12个阻塞）正处于停滞状态。<br>
+            <span class="label">🔧 行动建议：</span><strong>立即行动</strong>—为渠道-汽车领域增派资深开发人员；建立每日站会同步阻塞需求进展；对排队超过30天的需求进行专项清理（拆分、降级或取消）。<strong>短期改进</strong>—引入强制Code Review机制；建立WIP限制规则（在研需求数不超过团队人数的1.5倍）。
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 质量效能分析 ==================== -->
+<div class="section">
+    <div class="section-title"><span style="color:#10b981">✅</span> 质量效能分析</div>
+    <div class="chart-grid">
+        <div class="chart-box">
+            <div class="chart-box-title">缺陷趋势</div>
+            <div class="chart-box-subtitle">新增总数：1312个 &nbsp; 修复总数：1297个</div>
+            <div id="chart-defect-trend" class="chart-container tall"></div>
+        </div>
+        <div class="chart-box">
+            <div class="chart-box-title">缺陷修复速率分布</div>
+            <div class="chart-box-subtitle">周均修复缺陷：101个，均修复周期：1天</div>
+            <div id="chart-defect-fix-rate" class="chart-container tall"></div>
+        </div>
+    </div>
+    <div class="analysis-box">
+        <div class="analysis-item"><strong>缺陷修复效率优秀：</strong>新增缺陷1312个，修复1297个，修复率达 <strong>99%</strong>，修复闭环能力很强。<span class="check-green">✓</span></div>
+        <div class="analysis-item"><strong>修复速率快速：</strong>周均修复101个缺陷，均修复周期仅 <strong>1天</strong>。绝大部分缺陷在2天内解决（蓝色柱占比 &gt;85%），说明研发团队的 bug fix 响应速度很快。<span class="check-green">✓</span></div>
+        <div class="analysis-item"><strong>缺陷峰值与需求峰值同步：</strong>第21周缺陷新增达峰值（约180个），与需求新增峰值（约22个）同期出现。缺陷数约为需求数的8倍，<span class="tag orange">每需求平均≈8个缺陷</span>，质量水位偏低。<span class="tag orange">可能原因：Code Review执行不到位 + 单元测试覆盖率低 + 集成测试缺失</span></div>
+        <div class="analysis-item"><strong>长尾缺陷需关注：</strong>虽然大部分缺陷2天内修复，但仍有少量缺陷耗时2周以上（黄色柱），主要集中在第20-21周。这些长尾缺陷可能是<span class="tag purple">疑难问题或架构级缺陷</span>，需要专项跟踪。<span class="tag purple">可能原因：底层架构设计缺陷 + 回归测试不充分 + 环境差异导致复现困难</span></div>
+        <div class="key-insight">
+            <span class="label">💡 关键洞察：</span>质量团队修复能力强，但<strong>缺陷注入率偏高</strong>（每需求≈8个缺陷）。<br>
+            <span class="label">🔧 行动建议：</span><strong>短期改进（1-2个迭代）</strong>—引入强制Code Review机制（每个PR至少需要1人审批）；推行自动化单元测试，将缺陷注入率从8个/需求降至3个以下；建立缺陷根因分析机制，对长尾缺陷进行专项攻关。<strong>中长期规划</strong>—建设持续集成流水线，实现自动化回归测试全覆盖。
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 领域效能分析 ==================== -->
+<div class="section">
+    <div class="section-title"><span style="color:#f59e0b">📊</span> 领域效能分析</div>
+    <div class="chart-grid">
+        <div class="chart-box">
+            <div class="chart-box-title">各领域流动效率（按月对比）</div>
+            <div class="chart-box-subtitle">流动效率 = 增值时间 / 总耗时 | 红色虚线 = 70% 行业基准</div>
+            <div id="chart-domain-efficiency" class="chart-container tall"></div>
+        </div>
+        <div class="chart-box">
+            <div class="chart-box-title">按领域耗时结构分布</div>
+            <div class="chart-box-subtitle">蓝色=需求总耗时 | 橙色=增值时间 | 灰色=验收+上线耗时 | 黄色=排队总耗时</div>
+            <div id="chart-time-structure" class="chart-container tall"></div>
+        </div>
+    </div>
+    <div class="analysis-box">
+        <div class="analysis-item"><strong>渠道-汽车领域严重预警：</strong>排队总耗时从4月的0天飙升至5月的 <strong>109天</strong>（↑），是全场最高且增速最快的指标。这意味着渠道领域的需求大量积压在队列中等待处理。<span class="tag red">可能原因：关键人员单点故障（可能只有1-2人熟悉业务）+ 外部依赖阻塞（等待第三方接口联调）+ 历史遗留代码难以维护</span></div>
+        <div class="analysis-item"><strong>吉利领域相对稳定：</strong>流动效率3月59% → 5月60%，波动量小。排队总耗时控制在 3-7天范围内，是表现最稳定的领域。<span class="check-green">✓</span></div>
+        <div class="analysis-item"><strong>零售交易-汽车效率下滑：</strong>流动效率从3月85%骤降至4月48%（↓44%），5月回升至97%。4月的异常低效可能是<span class="tag orange">人员变动或技术债务爆发</span>导致，需要复盘4月发生了什么。</div>
+        <div class="analysis-item"><strong>批售交易-汽车效率持续优秀：</strong>流动效率3月83% → 4月100% → 5月100%，连续两个月达到100%，说明该领域流程优化到位，<span class="tag green">值得其他领域借鉴</span>。</div>
+        <div class="analysis-item"><strong>销售-汽车需关注：</strong>流动效率3月53% → 4月39% → 5月53%，4月出现明显低谷。<span class="tag orange">可能原因：跨团队协作不畅 + 需求优先级频繁调整</span></div>
+        <div class="analysis-item"><strong>营销-汽车耗时畸高：</strong>增值时间（橙色柱）在4月达到643天，远超其他领域。<span class="tag orange">可能原因：营销活动需求量大且链路长（活动配置→多渠道投放→数据追踪）+ 反复试错调整方案 + 跨团队协作成本高</span></div>
+        <div class="key-insight">
+            <span class="label">💡 关键洞察：</span>各领域的效能表现<strong>差异巨大</strong>——批售交易能做到100%流动效率，而渠道领域排队耗时飙升至109天。这说明问题不在于整体研发能力，而在于<strong>资源分配不均</strong>或<strong>领域间依赖关系复杂</strong>。<br>
+            <span class="label">🔧 行动建议：</span><strong>立即行动</strong>—对渠道-汽车领域进行专项产能诊断，增派资深开发人员或安排结对编程；梳理该领域的外部依赖方，明确联调时限。<strong>中长期规划</strong>—建立跨领域资源调度机制，避免关键人员单点故障；将批售交易的最佳实践（标准化流程、自动化测试）推广至其他领域；对老系统（渠道系统）进行技术重构，降低维护成本。
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 资源价值分析 ==================== -->
+<div class="section">
+    <div class="section-title"><span style="color:#a78bfa">👥</span> 资源价值分析</div>
+
+    <!-- KPI Cards for Resources -->
+    <div class="kpi-section" style="grid-template-columns: repeat(6, 1fr); margin-bottom: 20px;">
+        <div class="kpi-card blue">
+            <div class="kpi-header"><span class="kpi-icon blue">👤</span> 团队总人数</div>
+            <div class="kpi-row" style="justify-content: center;"><span class="kpi-value" style="font-size: 32px;">112</span></div>
+        </div>
+        <div class="kpi-card green">
+            <div class="kpi-header"><span class="kpi-icon green">✓</span> 匹配成功人数</div>
+            <div class="kpi-row" style="justify-content: center;"><span class="kpi-value" style="font-size: 32px;">104</span></div>
+        </div>
+        <div class="kpi-card orange">
+            <div class="kpi-header"><span class="kpi-icon orange">⏱</span> 总投入人天</div>
+            <div class="kpi-row" style="justify-content: center;"><span class="kpi-value" style="font-size: 32px;">6,434</span></div>
+        </div>
+        <div class="kpi-card blue">
+            <div class="kpi-header"><span class="kpi-icon blue">💼</span> 正编投入人天</div>
+            <div class="kpi-row" style="justify-content: center;"><span class="kpi-value" style="font-size: 32px;">4,141</span></div>
+        </div>
+        <div class="kpi-card red">
+            <div class="kpi-header"><span class="kpi-icon red"></span> 外包投入人天</div>
+            <div class="kpi-row" style="justify-content: center;"><span class="kpi-value" style="font-size: 32px;">2,293</span></div>
+        </div>
+        <div class="kpi-card green">
+            <div class="kpi-header"><span class="kpi-icon green">📊</span> 人均投入人天</div>
+            <div class="kpi-row" style="justify-content: center;"><span class="kpi-value" style="font-size: 32px;">61.9</span></div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="chart-grid">
+        <div class="chart-box">
+            <div class="chart-box-title">各产品线人力投入分布</div>
+            <div id="chart-resource-product" class="chart-container tall"></div>
+        </div>
+        <div class="chart-box">
+            <div class="chart-box-title">人均产出效率（人天/人）</div>
+            <div id="chart-resource-efficiency" class="chart-container tall"></div>
+        </div>
+    </div>
+
+    <!-- Resource Table: 正编 vs 外包 -->
+    <div class="analysis-box" style="padding: 0; overflow: hidden;">
+        <div style="padding: 16px 20px 8px;">
+            <div style="font-size: 14px; font-weight: 600; color: #f1f5f9; margin-bottom: 12px;">正编 vs 外包对比（分岗位）</div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                    <tr style="background: rgba(78,121,167,0.2);">
+                        <th style="padding: 10px 8px; text-align: center; color: #94a3b8; font-weight: 600; border-bottom: 1px solid rgba(148,163,184,0.15);">岗位</th>
+                        <th style="padding: 10px 8px; text-align: center; color: #94a3b8; font-weight: 600; border-bottom: 1px solid rgba(148,163,184,0.15);">正编<br>人数</th>
+                        <th style="padding: 10px 8px; text-align: center; color: #94a3b8; font-weight: 600; border-bottom: 1px solid rgba(148,163,184,0.15);">外包<br>人数</th>
+                        <th style="padding: 10px 8px; text-align: center; color: #94a3b8; font-weight: 600; border-bottom: 1px solid rgba(148,163,184,0.15);">正编<br>投入人天</th>
+                        <th style="padding: 10px 8px; text-align: center; color: #94a3b8; font-weight: 600; border-bottom: 1px solid rgba(148,163,184,0.15);">外包<br>投入人天</th>
+                        <th style="padding: 10px 8px; text-align: center; color: #94a3b8; font-weight: 600; border-bottom: 1px solid rgba(148,163,184,0.15);">合计<br>人天</th>
+                        <th style="padding: 10px 8px; text-align: center; color: #94a3b8; font-weight: 600; border-bottom: 1px solid rgba(148,163,184,0.15);">正编<br>占比</th>
+                        <th style="padding: 10px 8px; text-align: center; color: #94a3b8; font-weight: 600; border-bottom: 1px solid rgba(148,163,184,0.15);">外包<br>占比</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom: 1px solid rgba(148,163,184,0.08);">
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">产品</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">12</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">4</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">733</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">248</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">981</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">74.7%</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">25.3%</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid rgba(148,163,184,0.08);">
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">前端</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">17</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">4</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">1039</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">248</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">1287</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">80.7%</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">19.3%</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid rgba(148,163,184,0.08);">
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">后端</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">28</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">14</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">1695</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">867</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">2562</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">66.2%</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">33.8%</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid rgba(148,163,184,0.08);">
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">测试</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">11</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">14</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">674</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">930</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">1604</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">42.0%</td>
+                        <td style="padding: 8px; text-align: center; color: #cbd5e1;">58.0%</td>
+                    </tr>
+                    <tr style="background: rgba(78,121,167,0.08);">
+                        <td style="padding: 10px 8px; text-align: center; color: #f1f5f9; font-weight: 600;">合计</td>
+                        <td style="padding: 10px 8px; text-align: center; color: #f1f5f9; font-weight: 600;">68</td>
+                        <td style="padding: 10px 8px; text-align: center; color: #f1f5f9; font-weight: 600;">36</td>
+                        <td style="padding: 10px 8px; text-align: center; color: #f1f5f9; font-weight: 600;">4141</td>
+                        <td style="padding: 10px 8px; text-align: center; color: #f1f5f9; font-weight: 600;">2293</td>
+                        <td style="padding: 10px 8px; text-align: center; color: #f1f5f9; font-weight: 600;">6434</td>
+                        <td style="padding: 10px 8px; text-align: center; color: #f1f5f9; font-weight: 600;">64.4%</td>
+                        <td style="padding: 10px 8px; text-align: center; color: #f1f5f9; font-weight: 600;">35.6%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="chart-grid" style="margin-top: 16px;">
+        <div class="chart-box" style="grid-column: 1 / -1;">
+            <div class="chart-box-title">岗位角色配比健康度</div>
+            <div id="chart-resource-ratio" class="chart-container tall"></div>
+        </div>
+    </div>
+
+    <div class="analysis-box">
+        <div class="analysis-item"><strong>资源高度集中：</strong>消费者移动端产品消耗 <strong>5477h</strong>（占总工时43%），线索清洗与分配管理 <strong>1385h</strong>（11%），TOP2产品线占据过半资源。</div>
+        <div class="analysis-item"><strong>人均产出效率差异显著：</strong>平均人均投入为11.8人天。高于均值30%（&gt;15.3）的产品有：营销服BI(55.1)、培训管理(42.3)、消费者移动端(40.2)、品牌营销(27.6)、线索清洗(24.1)，需关注投入合理性。低于均值30%（&lt;8.2）的产品有：销售用车(8.2)、用户运营(8.0)、渠道人员(7.2)、数智交付(6.3)、售后服务(6.3)，可能存在资源不足风险。</div>
+        <div class="key-insight">
+            <span class="label">💡 关键洞察：</span>资源投入与实际产出存在偏差，部分产品线人均投入过高可能导致上下文切换频繁、有效产出折损。<br>
+            <span class="label">🔧 行动建议：</span>对人均投入&gt;15.3的高负载产品线进行专项审视，评估是否存在资源挤占或需求优先级不清的问题；建立跨产品线资源调度机制，避免关键人员单点故障。
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 综合评估与改进建议 ==================== -->
+<div class="summary-section">
+    <div class="summary-title">📌 综合评估与改进建议</div>
+    <div class="score-bar">
+        <span class="score-label">综合效能评分</span>
+        <div class="score-track"><div class="score-fill"></div></div>
+        <span class="score-value">52 / 100</span>
+    </div>
+    <div class="rec-grid">
+        <div class="rec-card urgent">
+            <div class="rec-title"><span class="rec-dot red"></span><span style="color:#f87171">紧急风险（需立即处理）</span></div>
+            <ul class="rec-list">
+                <li data-num="① ">渠道-汽车排队耗时109天 — 需立即调配资源或拆分需求</li>
+                <li data-num="② ">5月完成数仅24个（环比-53%），产出能力断崖式下滑</li>
+                <li data-num="③ ">在研+阻塞共60个需求堆积，WIP严重超限</li>
+            </ul>
+        </div>
+        <div class="rec-card attention">
+            <div class="rec-title"><span class="rec-dot orange"></span><span style="color:#fbbf24">关注项（本迭代内解决）</span></div>
+            <ul class="rec-list">
+                <li data-num="① ">每需求平均8个缺陷，需加强 Code Review 和单测覆盖</li>
+                <li data-num="② ">P3优先级零交付，需设定最低交付比例防止技术债</li>
+                <li data-num=" ">销售-汽车/营销-汽车流动效率偏低，需流程优化</li>
+            </ul>
+        </div>
+        <div class="rec-card strength">
+            <div class="rec-title"><span class="rec-dot green"></span><span style="color:#34d399">保持优势（继续坚持）</span></div>
+            <ul class="rec-list">
+                <li data-num="① ">缺陷修复率99%，修复周期1天，质量闭环能力强</li>
+                <li data-num="② ">高价值需求交付率86%，优先级管理有效</li>
+                <li data-num="③ ">批售交易-汽车流动效率100%，最佳实践可复用</li>
+                <li data-num="④ ">吉利领域表现稳定，可作为基线参考</li>
+            </ul>
+        </div>
+        <div class="rec-card improvement">
+            <div class="rec-title"><span class="rec-dot blue"></span><span style="color:#60a5fa">改进方向（中长期规划）</span></div>
+            <ul class="rec-list">
+                <li data-num="① ">建立 WIP 限制机制，控制在研需求不超过产能的 1.5x</li>
+                <li data-num=" ">推行自动化测试，将缺陷注入率从 8个/需求 降至 3个以下</li>
+                <li data-num="③ ">建立跨领域资源调度机制，消除渠道领域瓶颈</li>
+                <li data-num="④ ">引入"交付率"替代"如期交付率"作为核心指标，避免统计偏差</li>
+            </ul>
+        </div>
+    </div>
+    <div class="conclusion-box">
+        <div class="conclusion-text">
+            ️ <strong>核心结论：</strong>团队当前的主要矛盾不是<span class="hl">"做得不够好"</span>，而是<span class="hl">"做得不够多"</span>。质量修复能力优秀（99%修复率、1天周期），但交付吞吐能力严重不足（5月产出/流入比仅32%）。<span class="hl-orange">当务之急是疏通交付管道、降低WIP、解决渠道领域的产能瓶颈</span>，而非继续优化已经表现良好的质量环节。建议下一迭代将重点放在<span class="hl">减少在制品数量</span>和<span class="hl">提升需求流动速度</span>上。
+        </div>
+    </div>
+</div>
+
+<script>
+var axisLine = { lineStyle: { color: 'rgba(148,163,184,0.15)' } };
+var axisLabel = { color: '#94a3b8', fontSize: 10 };
+var splitLine = { lineStyle: { color: 'rgba(148,163,184,0.08)' } };
+var legendStyle = { textStyle: { color: '#94a3b8', fontSize: 11 }, top: 0 };
+
+// ====== Chart 1: 需求趋势 ======
+var c1 = echarts.init(document.getElementById('chart-demand-trend'));
+c1.setOption({
+    tooltip: { trigger: 'axis' },
+    legend: {
+        data: ['阻塞需求','新增需求','完成需求','在研需求'],
+        ...legendStyle, right: 0, itemWidth: 14, itemHeight: 10
+    },
+    grid: { left: '8%', right: '10%', bottom: '8%', top: '16%' },
+    xAxis: {
+        type: 'category',
+        data: ['10周','11周','12周','13周','14周','15周','16周','17周','18周','19周','20周','21周','22周'],
+        ...axisLine, axisLabel: { ...axisLabel, fontSize: 9 }
+    },
+    yAxis: [
+        { type: 'value', name: '数量', nameTextStyle: { color: '#94a3b8', fontSize: 10 }, ...axisLine, axisLabel, splitLine },
+        { type: 'value', name: '在研', nameTextStyle: { color: '#94a3b8', fontSize: 10 }, max: 20, ...axisLine, axisLabel, splitLine: { show: false } }
+    ],
+    series: [
+        { name: '阻塞需求', type: 'bar', data: [1,0,0,4,2,2,0,0,2,3,1,6,2], itemStyle: { color: '#E6A23C' }, barGap: '15%', barWidth: '18%' },
+        { name: '新增需求', type: 'bar', data: [33,25,12,27,27,15,17,18,6,19,6,22,24], itemStyle: { color: '#409EFF' }, barWidth: '18%' },
+        { name: '完成需求', type: 'bar', data: [22,21,10,20,22,10,12,11,5,11,7,6,5], itemStyle: { color: '#67C23A' }, barWidth: '18%' },
+        { name: '在研需求', type: 'line', yAxisIndex: 1, data: [10,4,2,3,3,3,5,5,1,5,5,9,16], smooth: false, itemStyle: { color: '#909399' }, symbol: 'circle', symbolSize: 6, lineStyle: { width: 2 } }
+    ]
+});
+
+// ====== Chart 2: 需求交付速率分布 ======
+var c2 = echarts.init(document.getElementById('chart-delivery-rate'));
+c2.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: {
+        data: ['耗时1周内','耗时1-2周','耗时2-4周','耗时4周以上'],
+        ...legendStyle, itemWidth: 12, itemHeight: 10
+    },
+    grid: { left: '8%', right: '5%', bottom: '8%', top: '16%' },
+    xAxis: {
+        type: 'category',
+        data: ['10周','11周','12周','13周','14周','15周','16周','17周','18周','19周','20周','21周','22周'],
+        ...axisLine, axisLabel: { ...axisLabel, fontSize: 9 }
+    },
+    yAxis: { type: 'value', max: 25, ...axisLine, axisLabel, splitLine },
+    series: [
+        { name: '耗时1周内', type: 'bar', stack: 's', data: [5,5,2,7,3,2,5,4,0,7,3,6,0], itemStyle: { color: '#2E5C8A' } },
+        { name: '耗时1-2周', type: 'bar', stack: 's', data: [2,3,2,4,3,1,2,0,3,2,0,4,0], itemStyle: { color: '#4A90D9' } },
+        { name: '耗时2-4周', type: 'bar', stack: 's', data: [3,5,1,2,14,3,2,7,2,2,0,0,0], itemStyle: { color: '#85C1E9' } },
+        { name: '耗时4周以上', type: 'bar', stack: 's', data: [12,8,5,7,2,4,3,0,0,0,0,0,0], itemStyle: { color: '#C5D5E4' } }
+    ]
+});
+
+// ====== Chart 3: 需求累计流图 ======
+var c3 = echarts.init(document.getElementById('chart-cumulative-flow'));
+c3.setOption({
+    tooltip: { trigger: 'axis' },
+    legend: {
+        data: ['发布阶段','验收阶段','测试阶段','开发阶段','设计阶段','需求阶段'],
+        ...legendStyle, right: 0, itemWidth: 10, itemHeight: 8
+    },
+    grid: { left: '8%', right: '5%', bottom: '8%', top: '16%' },
+    xAxis: {
+        type: 'category', boundaryGap: false,
+        data: ['10周','11周','12周','13周','14周','15周','16周','17周','18周','19周','20周','21周','22周'],
+        ...axisLine, axisLabel: { ...axisLabel, fontSize: 9 }
+    },
+    yAxis: { type: 'value', max: 35, ...axisLine, axisLabel, splitLine },
+    series: [
+        { name: '需求阶段', type: 'line', stack: 'total', areaStyle: { opacity: 0.7 }, data: [6,1,1,2,1,0,1,1,0,2,1,3,4], itemStyle: { color: '#1a3a5c' }, symbol: 'none', lineStyle: { width: 1 } },
+        { name: '设计阶段', type: 'line', stack: 'total', areaStyle: { opacity: 0.7 }, data: [1,0,0,0,0,1,1,1,0,0,0,3,0], itemStyle: { color: '#2c5f8a' }, symbol: 'none', lineStyle: { width: 1 } },
+        { name: '开发阶段', type: 'line', stack: 'total', areaStyle: { opacity: 0.7 }, data: [2,1,0,0,1,1,1,1,2,2,2,2,4], itemStyle: { color: '#4A90D9' }, symbol: 'none', lineStyle: { width: 1 } },
+        { name: '测试阶段', type: 'line', stack: 'total', areaStyle: { opacity: 0.7 }, data: [0,1,1,0,0,1,1,1,0,0,0,1,9], itemStyle: { color: '#85C1E9' }, symbol: 'none', lineStyle: { width: 1 } },
+        { name: '验收阶段', type: 'line', stack: 'total', areaStyle: { opacity: 0.7 }, data: [0,1,0,1,1,0,1,1,1,2,3,1,1], itemStyle: { color: '#A8D4F0' }, symbol: 'none', lineStyle: { width: 1 } },
+        { name: '发布阶段', type: 'line', stack: 'total', areaStyle: { opacity: 0.7 }, data: [22,21,10,20,22,10,12,11,5,11,7,6,6], itemStyle: { color: '#C5D5E4' }, symbol: 'none', lineStyle: { width: 1 } }
+    ]
+});
+
+// ====== Chart 4: 需求价值交付分布 ======
+var c4 = echarts.init(document.getElementById('chart-value-dist'));
+c4.setOption({
+    tooltip: { trigger: 'axis' },
+    legend: {
+        data: ['上线完成','投入时长','交付率'],
+        ...legendStyle, right: 0, itemWidth: 14, itemHeight: 10
+    },
+    grid: { left: '10%', right: '10%', bottom: '10%', top: '16%' },
+    xAxis: {
+        type: 'category',
+        data: ['P0-0','P0-1','P1','P2','P3','P4'],
+        ...axisLine, axisLabel: { ...axisLabel, fontSize: 10 }
+    },
+    yAxis: [
+        { type: 'value', name: '数量/时长', nameTextStyle: { color: '#94a3b8', fontSize: 10 }, max: 1000, ...axisLine, axisLabel, splitLine },
+        { type: 'value', name: '交付率', nameTextStyle: { color: '#94a3b8', fontSize: 10 }, min: 0, max: 120, axisLabel: { formatter: '{value}%', color: '#94a3b8', fontSize: 10 }, splitLine: { show: false } }
+    ],
+    series: [
+        { name: '上线完成', type: 'bar', data: [60,15,580,720,20,10], itemStyle: { color: '#4A90D9' }, barGap: '20%', barWidth: '30%' },
+        { name: '投入时长', type: 'bar', data: [150,100,780,980,50,20], itemStyle: { color: '#F5A623' }, barWidth: '30%' },
+        { name: '交付率', type: 'line', yAxisIndex: 1, data: [100,100,58,61,0,60], itemStyle: { color: '#909399' }, symbol: 'circle', symbolSize: 8, lineStyle: { width: 2 },
+          label: { show: true, formatter: '{c}%', color: '#94a3b8', fontSize: 10, position: 'top' } }
+    ]
+});
+
+// ====== Chart 5: 缺陷趋势 ======
+var c5 = echarts.init(document.getElementById('chart-defect-trend'));
+c5.setOption({
+    tooltip: { trigger: 'axis' },
+    legend: {
+        data: ['新增','已修复','存量'],
+        ...legendStyle, itemWidth: 14, itemHeight: 10
+    },
+    grid: { left: '8%', right: '5%', bottom: '8%', top: '16%' },
+    xAxis: {
+        type: 'category',
+        data: ['10周','11周','12周','13周','14周','15周','16周','17周','18周','19周','20周','21周','22周'],
+        ...axisLine, axisLabel: { ...axisLabel, fontSize: 9 }
+    },
+    yAxis: { type: 'value', max: 200, ...axisLine, axisLabel, splitLine },
+    series: [
+        { name: '新增', type: 'bar', data: [58,82,142,148,64,56,74,147,56,111,150,180,44], itemStyle: { color: '#409EFF' }, barGap: '10%', barWidth: '25%' },
+        { name: '已修复', type: 'bar', data: [58,82,142,148,64,56,73,144,56,109,148,177,40], itemStyle: { color: '#B0BEC5' }, barWidth: '25%' },
+        { name: '存量', type: 'line', data: [0,0,0,0,1,1,2,2,2,2,4,3,0], itemStyle: { color: '#F5A623' }, symbol: 'none', lineStyle: { width: 2 } }
+    ]
+});
+
+// ====== Chart 6: 缺陷修复速率分布 ======
+var c6 = echarts.init(document.getElementById('chart-defect-fix-rate'));
+c6.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: {
+        data: ['耗时2天内','耗时3-7天','耗时1-2周','耗时2周以上'],
+        ...legendStyle, itemWidth: 12, itemHeight: 10
+    },
+    grid: { left: '8%', right: '5%', bottom: '8%', top: '16%' },
+    xAxis: {
+        type: 'category',
+        data: ['10周','11周','12周','13周','14周','15周','16周','17周','18周','19周','20周','21周','22周'],
+        ...axisLine, axisLabel: { ...axisLabel, fontSize: 9 }
+    },
+    yAxis: { type: 'value', max: 200, ...axisLine, axisLabel, splitLine },
+    series: [
+        { name: '耗时2天内', type: 'bar', stack: 's', data: [58,82,142,148,64,56,74,147,56,110,134,166,36], itemStyle: { color: '#2E5C8A' } },
+        { name: '耗时3-7天', type: 'bar', stack: 's', data: [0,0,0,0,0,0,0,0,0,14,11,4,4], itemStyle: { color: '#F5A623' } },
+        { name: '耗时1-2周', type: 'bar', stack: 's', data: [0,0,0,0,0,0,0,0,1,3,4,0,0], itemStyle: { color: '#B0BEC5' } },
+        { name: '耗时2周以上', type: 'bar', stack: 's', data: [0,0,0,0,0,0,0,0,0,2,0,0,0], itemStyle: { color: '#F9E79F' } }
+    ]
+});
+
+// ====== Chart 7: 各领域流动效率 ======
+var c7 = echarts.init(document.getElementById('chart-domain-efficiency'));
+c7.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: {
+        data: ['3月','4月','5月','行业基准70%'],
+        ...legendStyle, itemWidth: 12, itemHeight: 10
+    },
+    grid: { left: '8%', right: '5%', bottom: '14%', top: '16%' },
+    xAxis: {
+        type: 'category',
+        data: ['吉利','零售交易-汽车','批售交易-汽车','渠道-汽车','销售-汽车','营销-汽车'],
+        ...axisLine, axisLabel: { color: '#94a3b8', fontSize: 11, rotate: 0 }
+    },
+    yAxis: { type: 'value', axisLabel: { formatter: '{value}%', color: '#94a3b8', fontSize: 10 }, ...axisLine, splitLine },
+    series: [
+        { name: '3月', type: 'bar', data: [59,85,83,63,53,71], itemStyle: { color: '#4A90D9' }, barGap: '15%', barWidth: '20%' },
+        { name: '4月', type: 'bar', data: [58,48,100,75,39,49], itemStyle: { color: '#F5A623' }, barWidth: '20%' },
+        { name: '5月', type: 'bar', data: [60,97,100,57,53,51], itemStyle: { color: '#B0BEC5' }, barWidth: '20%' },
+        { name: '行业基准70%', type: 'line', data: [70,70,70,70,70,70], itemStyle: { color: '#E74C3C' }, lineStyle: { type: 'dashed', width: 2 }, symbol: 'none' }
+    ]
+});
+
+// ====== Chart 8: 按领域耗时结构分布 ======
+var c8 = echarts.init(document.getElementById('chart-time-structure'));
+c8.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: {
+        data: ['需求总耗时(天)','增值时间','验收+上线耗时','排队总耗时(天)'],
+        ...legendStyle, itemWidth: 12, itemHeight: 10
+    },
+    grid: { left: '4%', right: '3%', bottom: '18%', top: '14%' },
+    xAxis: {
+        type: 'category',
+        data: ['营销-汽车\n3月','营销-汽车\n4月','营销-汽车\n5月','销售-汽车\n3月','销售-汽车\n4月','销售-汽车\n5月','零售交易\n3月','零售交易\n4月','零售交易\n5月','渠道-汽车\n3月','渠道-汽车\n4月','渠道-汽车\n5月','批售交易\n3月','批售交易\n4月','批售交易\n5月','吉利\n3月','吉利\n4月','吉利\n5月'],
+        ...axisLine, axisLabel: { ...axisLabel, fontSize: 9, rotate: 35 }
+    },
+    yAxis: { type: 'value', max: 1500, ...axisLine, axisLabel, splitLine },
+    series: [
+        { name: '需求总耗时(天)', type: 'bar', stack: 's', data: [74,345,288,105,74,98,0,0,1,102,91,127,0,0,0,100,95,77], itemStyle: { color: '#4A90D9' } },
+        { name: '增值时间', type: 'bar', stack: 's', data: [407,643,346,185,196,216,87,11,290,251,390,330,7,0,35,258,232,202], itemStyle: { color: '#F5A623' } },
+        { name: '验收+上线耗时', type: 'bar', stack: 's', data: [85,298,45,48,176,60,16,12,7,45,36,12,1,0,0,65,59,42], itemStyle: { color: '#B0BEC5' } },
+        { name: '排队总耗时(天)', type: 'bar', stack: 's', data: [7,13,0,11,58,33,0,0,0,0,1,109,0,0,0,18,17,18], itemStyle: { color: '#F9E79F' } }
+    ]
+});
+
+// ====== Resource Charts ======
+// Chart R1: 各产品线人力投入分布
+var cr1 = echarts.init(document.getElementById('chart-resource-product'));
+cr1.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: {
+        data: ['产品','前端','后端','测试'],
+        ...legendStyle, itemWidth: 12, itemHeight: 10
+    },
+    grid: { left: '8%', right: '5%', bottom: '18%', top: '14%' },
+    xAxis: {
+        type: 'category',
+        data: ['消费者移动端','商机跟进','品牌营销','整车交易','培训管理','线索清洗','内部系统移动','备件管理','门店现场','数智交付'],
+        ...axisLine, axisLabel: { ...axisLabel, fontSize: 9, rotate: 35 }
+    },
+    yAxis: { type: 'value', name: '人天', ...axisLine, axisLabel, splitLine },
+    series: [
+        { name: '产品', type: 'bar', stack: 's', data: [260,97,155,66,51,109,84,0,21,28], itemStyle: { color: '#4e79a7' } },
+        { name: '前端', type: 'bar', stack: 's', data: [696,122,101,29,118,33,64,0,24,5], itemStyle: { color: '#59a14f' } },
+        { name: '后端', type: 'bar', stack: 's', data: [711,322,203,348,232,134,49,83,90,48], itemStyle: { color: '#f28e2b' } },
+        { name: '测试', type: 'bar', stack: 's', data: [506,202,147,132,149,61,60,86,21,51], itemStyle: { color: '#e15759' } }
+    ]
+});
+
+// Chart R2: 人均产出效率
+var cr2 = echarts.init(document.getElementById('chart-resource-efficiency'));
+cr2.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: '12%', right: '8%', bottom: '8%', top: '8%' },
+    xAxis: {
+        type: 'value', name: '人天/人', ...axisLine, axisLabel, splitLine
+    },
+    yAxis: {
+        type: 'category',
+        data: ['技术支持','二手车','交付管理','供应商系统PC端','内部系统PC端','消息中心','安全平台','产销协同','用户联络管理','C用户中心','B用户中心','用户体验管理','售后服务管理','数智交付管理','渠道人员管理','用户运营管理','销售用车管理','渠道管理','门店现场管理','内部系统移动端','保修索赔','非整车交易管理','备件管理','商机跟进管理','整车交易管理','线索清洗与分配','品牌营销管理','培训管理','消费者移动端','营销服BI'],
+        ...axisLine, axisLabel: { ...axisLabel, fontSize: 9 }
+    },
+    series: [{
+        type: 'bar',
+        data: [1.7,1.4,0.8,0.3,0.3,1.9,1.7,2.3,2.9,3.7,1.9,4.6,6.3,6.3,7.2,8.0,8.2,8.5,10.4,10.7,13.4,13.4,15.4,20.6,22.1,24.1,27.6,42.3,40.2,55.1],
+        itemStyle: {
+            color: function(params) {
+                return params.value > 15.3 ? '#e15759' : (params.value < 8.2 ? '#59a14f' : '#4e79a7');
+            }
+        }
+    }]
+});
+
+// Chart R3: 岗位角色配比健康度
+var cr3 = echarts.init(document.getElementById('chart-resource-ratio'));
+cr3.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: {
+        data: ['产品%','前端%','后端%','测试%'],
+        ...legendStyle, itemWidth: 12, itemHeight: 10
+    },
+    grid: { left: '8%', right: '5%', bottom: '18%', top: '14%' },
+    xAxis: {
+        type: 'category',
+        data: ['消费者移动端','商机跟进','品牌营销','整车交易','培训管理','线索清洗','内部系统移动','备件管理','门店现场','数智交付'],
+        ...axisLine, axisLabel: { ...axisLabel, fontSize: 9, rotate: 35 }
+    },
+    yAxis: { type: 'value', max: 100, name: '占比%', ...axisLine, axisLabel, splitLine },
+    series: [
+        { name: '产品%', type: 'bar', stack: 's', data: [12,13,26,11,9,32,33,0,13,21], itemStyle: { color: '#4e79a7' } },
+        { name: '前端%', type: 'bar', stack: 's', data: [32,16,17,5,21,10,25,0,16,4], itemStyle: { color: '#59a14f' } },
+        { name: '后端%', type: 'bar', stack: 's', data: [33,43,33,61,42,40,19,49,58,37], itemStyle: { color: '#f28e2b' } },
+        { name: '测试%', type: 'bar', stack: 's', data: [23,27,24,23,27,18,23,51,14,38], itemStyle: { color: '#e15759' } }
+    ]
+});
+
+window.addEventListener('resize', function() {
+    [c1,c2,c3,c4,c5,c6,c7,c8,cr1,cr2,cr3].forEach(function(c) { c.resize(); });
+});
+</script>
+</body>
+</html>
